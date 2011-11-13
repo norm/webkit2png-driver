@@ -2,7 +2,9 @@
 
 use Modern::Perl;
 use Config::Std;
+use File::Copy;
 use File::Path;
+use Getopt::Long;
 
 my %base_config = (
         delay           => 0,
@@ -13,31 +15,54 @@ my %base_config = (
         width           => 1024,
     );
 
+my %option;
+GetOptions( \%option, 'archive|a=s' );
+
 my $conf_file     = shift // 'driver.ini';
 my %config        = get_configuration( $conf_file );
 my $current_login = '';
-
-logout()
-    if $config{''}{'loggedout'};
 
 my @pages;
 if ( $#ARGV > -1 ) {
     @pages = @ARGV;
 }
 else {
-    @pages = keys %config;
+    foreach my $section ( keys %config ) {
+        # skip anything that is not a screen grab
+        next if $section =~ m{\#};
+        next if $section eq '';
+        
+        push @pages, $section;
+    }
 }
 
-foreach my $section ( sort by_name_and_state @pages ) {
-    # skip anything that is not a screen grab
-    next if $section =~ m{\#};
-    next if $section eq '';
-    
-    screengrab( $section );
+if ( $option{'archive'} ) {
+    archive_files();
+}
+else {
+    logout()
+        if $config{''}{'loggedout'};
+
+    foreach my $section ( sort by_name_and_state @pages ) {
+        screengrab( $section );
+    }
 }
 exit;
 
 
+sub archive_files {
+    my $signature = $option{'archive'};
+    
+    foreach my $section ( @pages ) {
+        foreach my $suffix ( 'full', 'thumb', 'clipped' ) {
+            my $source = "${section}/latest-${suffix}.png";
+            my $target = "${section}/${signature}-${suffix}.png";
+            
+            copy($source, $target)
+                if -f $source;
+        }
+    }
+}
 sub login {
     my $login   = shift;
     my $section = "user#${login}";
