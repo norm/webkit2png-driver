@@ -1,0 +1,190 @@
+#!/usr/bin/env perl
+
+use Modern::Perl;
+use Config::Std;
+use File::Path;
+
+my %base_config = (
+        delay           => 0,
+        make_clipped    => 1,
+        make_fullsize   => 1,
+        make_thumb      => 1,
+        clipwidth       => 250,
+        width           => 1024,
+    );
+
+my $conf_file     = shift // 'driver.ini';
+my %config        = get_configuration( $conf_file );
+my $current_login = '';
+
+logout()
+    if $config{''}{'loggedout'};
+
+my @pages;
+if ( $#ARGV > -1 ) {
+    @pages = @ARGV;
+}
+else {
+    @pages = keys %config;
+}
+
+foreach my $section ( sort by_name_and_state @pages ) {
+    # skip anything that is not a screen grab
+    next if $section =~ m{\#};
+    next if $section eq '';
+    
+    screengrab( $section );
+}
+exit;
+
+
+sub login {
+    my $login   = shift;
+    my $section = "user#${login}";
+    
+    my $username_field = $config{'form#login'}{'username'};
+    my $username       = $config{$section}{'username'};
+    my $password_field = $config{'form#login'}{'password'};
+    my $password       = $config{$section}{'password'};
+    my $submit_button  = $config{'form#login'}{'submit'};
+    my $javascript     = <<END;
+        \$("${username_field}").val("${username}");
+        \$("${password_field}").val("${password}");
+        \$("${submit_button}").trigger('click');
+END
+    
+    discarded_screengrab(
+        get_full_url_for('form#login'),
+        $javascript,
+    );
+    
+    $current_login = $login;
+}
+sub logout {
+    my $logout_button = $config{'form#logout'}{'submit'};
+    my $javascript    = <<END;
+        \$("${logout_button}").trigger('click');
+END
+
+    discarded_screengrab(
+        get_full_url_for('form#logout'),
+        $javascript,
+    );
+    
+    $current_login = '';
+}
+sub screengrab {
+    my $section = shift;
+    
+    my $login = get_key($section, 'login') // '';
+    if ( $login ne $current_login ) {
+        if ( !$login ) {
+            logout();
+        }
+        else {
+            login($login);
+        }
+    }
+    
+    my $url  = get_full_url_for( $section );
+    my @args = get_args_for( $section );
+    
+    system( 'webkit2png', @args, $url );
+}
+sub discarded_screengrab {
+    my $url        = shift;
+    my $javascript = shift;
+    
+    system(
+        'webkit2png',
+        '--js',
+        $javascript,
+        '--dir',
+        '/tmp',
+        '--file',
+        'webkit2png-driver',
+        '--delay',
+        '5',
+        $url,
+    );
+}
+sub get_full_url_for {
+    my $section = shift;
+    
+    my $url = $config{$section}{'url'};
+    
+    $url = sprintf( '%s%s', $config{''}{'base'}, $url )
+        if $url !~ m{^https?://};
+    
+    return $url;
+}
+sub get_args_for {
+    my $section = shift;
+    my @args;
+    
+    my $width     = get_key($section, 'width');
+    my $clipwidth = get_key($section, 'clipwidth');
+    my $scale     = sprintf "%0.5f", $clipwidth / $width;
+    mkpath $section;
+    
+    push @args,
+        '--width',      $width,
+        '--clipwidth',  $clipwidth,
+        '--scale',      $scale,
+        '--dir',        $section,
+        '--filename',   'latest',
+        '--delay',      get_key($section, 'delay');
+    
+    push( @args, '--thumb' )
+        if get_key($section, 'make_thumb');
+    push( @args, '--clipped' )
+        if get_key($section, 'make_clipped');
+    push( @args, '--fullsize' )
+        if get_key($section, 'make_fullsize');
+    
+    push( @args, '--nojs' )
+        if get_key($section, 'nojs');
+    push( @args, '--noimages' )
+        if get_key($section, 'noimages');
+    
+    my $javascript = get_key($section, 'js');
+    push( @args, '--js', $javascript )
+        if defined $javascript;
+    
+    return @args;
+}
+sub get_key {
+    my $section = shift;
+    my $key     = shift;
+    
+    return $config{$section}{$key} // $config{''}{$key};
+}
+sub get_configuration {
+    my $file = shift;
+    
+    read_config $file => my %config;
+    
+    foreach my $key ( keys %base_config ) {
+        $config{''}{$key} = $base_config{$key}
+            unless defined $config{''}{$key};
+    }
+    
+    return %config;
+}
+sub by_name_and_state {
+    my $a_login = $config{$a}{'login'};
+    my $b_login = $config{$b}{'login'};
+    
+    if ( defined $a_login && defined $b_login ) {
+        return $a cmp $b
+            if $a_login eq $b_login;
+        return $a_login cmp $b_login;
+    }
+    
+    return  1
+        if defined $a_login && !defined $b_login;
+    return -1
+        if defined $b_login && !defined $a_login;
+    
+    return $a cmp $b;
+}
