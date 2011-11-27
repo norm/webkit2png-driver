@@ -1,0 +1,14 @@
+<ul id='grabs'>
+{{
+  foreach my $grab ( sort keys %{ $grabs{'commit'}{$commit} } ) { 
+    my $text = $grab;
+    $text =~ s{/}{ }g;
+}}
+    <li>
+      <h2><a href='/${grab}/'>${text}</a></h2>
+      <a href='/${grab}/${commit}-full.png' class='grab'>
+        <img src='/${grab}/${commit}-clipped.png'}>
+      </a>
+    </li>
+{{ } }}
+</ul>

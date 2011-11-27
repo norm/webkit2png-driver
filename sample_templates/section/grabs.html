@@ -1,0 +1,21 @@
+<ul id='grabs'>
+{{
+  my $latest_first = sub {
+    return  1 if $b =~ m{^latest};
+    return -1 if $a =~ m{^latest};
+    return $a cmp $b;
+  };
+  
+  foreach my $grab ( sort $latest_first keys %{ $grabs{'section'}{$section} } ) { 
+    next unless $grab =~ s{-full.png$}{};
+    my $text = $grab;
+    $text =~ s{/}{ }g;
+}}
+    <li>
+      <h2><a href='/${grab}/'>${text}</a></h2>
+      <a href='/${section}/${grab}-full.png' class='grab'>
+        <img src='/${section}/${grab}-clipped.png'}>
+      </a>
+    </li>
+{{ } }}
+</ul>

@@ -1,0 +1,8 @@
+{{ if ( defined $commit ) { }}
+  <p id='nav'>
+    <em>Screen grabs for <code>${commit}</code>.</em>
+    The last snapshot taken was
+      <a href='/${latest_commit}/index.html'>${latest_commit}</a>.
+    <a href='#commits'>List of all commits</a>.
+  </p>
+{{ } }}

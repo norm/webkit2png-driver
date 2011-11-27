@@ -64,7 +64,7 @@ First, you will need to copy the sample HTML templates from this repository
 to your screengrabs directory. You can customise them later (if you can
 stand to look at the embedded perl code).
 
-    % cp -R .../webkit2png-driver/templates-sample .
+    % cp -R .../webkit2png-driver/sample_templates ./_templates
     
 To regenerate the indexes:
 

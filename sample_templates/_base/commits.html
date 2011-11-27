@@ -1,0 +1,10 @@
+<h2 id='commits'>List of all commits</h2>
+<ul>
+  <li><a href='/'>latest</a></li>
+  {{
+    foreach my $commit ( sort keys %{ $grabs{'commit'} } ) { 
+      next if $commit eq 'latest';
+  }}
+    <li><a href='${commit}/'>${commit}</a></li>
+  {{ } }}
+</ul>
