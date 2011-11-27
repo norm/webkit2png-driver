@@ -16,9 +16,13 @@ my %base_config = (
     );
 
 my %option;
-GetOptions( \%option, 'archive|a=s' );
+GetOptions(
+        \%option,
+        'archive|a=s',
+        'config|c=s',
+    );
 
-my $conf_file     = shift // 'driver.ini';
+my $conf_file     = $option{'config'} // 'grabs.ini';
 my %config        = get_configuration( $conf_file );
 my $current_login = '';
 
