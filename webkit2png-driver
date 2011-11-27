@@ -5,6 +5,8 @@ use Config::Std;
 use File::Copy;
 use File::Path;
 use Getopt::Long;
+use IO::All         -utf8;
+use Template::Jigsaw;
 
 my %base_config = (
         delay           => 0,
@@ -19,18 +21,20 @@ my %option;
 GetOptions(
         \%option,
         'archive|a=s',
+        'generate-indexes|i',
         'config|c=s',
     );
 
 my $conf_file     = $option{'config'} // 'grabs.ini';
 my %config        = get_configuration( $conf_file );
 my $current_login = '';
-
+my $generator     = get_template_generator();
+my $grabs_title   = get_title();
 my @pages;
-if ( $#ARGV > -1 ) {
-    @pages = @ARGV;
-}
-else {
+
+
+
+if ( $option{'generate-indexes'} || $option{'archive'} ) {
     foreach my $section ( keys %config ) {
         # skip anything that is not a screen grab
         next if $section =~ m{\#};
@@ -38,20 +42,46 @@ else {
         
         push @pages, $section;
     }
-}
-
-if ( $option{'archive'} ) {
-    archive_files();
+    
+    archive_files()
+        if $option{'archive'};
+    generate_indexes()
 }
 else {
+    # performing screengrabs is the default option
+    if ( $#ARGV > -1 ) {
+        foreach my $page ( @ARGV ) {
+            foreach my $section ( keys %config ) {
+                push( @pages, $section )
+                    if $section =~ m{$page};
+            }
+        }
+    }
+    else {
+        foreach my $section ( keys %config ) {
+            # skip anything that is not a screen grab
+            next if $section =~ m{\#};
+            next if $section eq '';
+            
+            push @pages, $section;
+        }
+    }
+    
+    my $total = scalar @pages;
+    my @sections = get_sections_in_order( @pages );
+    
     logout()
         if $config{''}{'loggedout'};
-
-    foreach my $section ( sort by_name_and_state @pages ) {
-        screengrab( $section );
+    
+    foreach my $section ( @sections ) {
+        state $count = 0;
+        $count++;
+        
+        screengrab( $section, $count, $total );
     }
 }
 exit;
+
 
 
 sub archive_files {
@@ -66,6 +96,100 @@ sub archive_files {
                 if -f $source;
         }
     }
+    write_latest_commit( $signature );
+}
+sub generate_indexes {
+    my $grabs  = find_all_screengrabs();
+    my $latest = read_latest_commit();
+    
+    generate_from_template(
+        'index',
+        'index.html',
+        {
+            commit        => 'latest',
+            grabs         => $grabs,
+            latest_commit => $latest,
+            title         => $grabs_title,
+        }
+    );
+    
+    foreach my $commit ( keys %{ $grabs->{'commit'} } ) {
+        next unless $commit;
+        
+        mkpath $commit;
+        generate_from_template(
+            'commit',
+            "${commit}/index.html",
+            {
+                commit        => $commit,
+                grabs         => $grabs,
+                latest_commit => $latest,
+                title         => $grabs_title,
+            }
+        );
+    }
+    
+    foreach my $section ( keys %{ $grabs->{'section'} } ) {
+        generate_from_template(
+            'section',
+            "${section}/index.html",
+            {
+                grabs         => $grabs,
+                latest_commit => $latest,
+                section       => $section,
+                title         => $grabs_title,
+            }
+        );
+    }
+}
+sub find_all_screengrabs {
+    my %grabs = (
+            'section' => {},
+            'commit'  => {},
+        );
+    
+    foreach my $section ( @pages ) {
+        $grabs{'section'}{$section} = {};
+        
+        opendir my $dir, $section
+            or die "Cannot open directory $section: $!";
+        
+        while ( my $file = readdir $dir ) {
+            if ( $file =~ m{^ (.+)-(?: full|clipped|thumb)\.png $}x ) {
+                $grabs{'section'}{$section}{$file} = 1;
+                $grabs{'commit'}{$1}{$section} = 1;
+            }
+        }
+    }
+    
+    return \%grabs;
+}
+sub read_latest_commit {
+    my $commit < io('latest.txt');
+    chomp $commit;
+    
+    return $commit;
+}
+sub write_latest_commit {
+    my $commit = shift;
+    $commit > io('latest.txt');
+}
+sub generate_from_template {
+    my $template = shift;
+    my $target   = shift;
+    my $data     = shift;
+    
+    my( $output, $errors ) = $generator->render(
+            '/',
+            'html',
+            { type => $template },
+            $data
+        );
+    
+    say STDERR $errors
+        if $errors;
+    
+    $output > io($target);
 }
 sub login {
     my $login   = shift;
@@ -188,6 +312,9 @@ sub get_key {
     
     return $config{$section}{$key} // $config{''}{$key};
 }
+sub get_title {
+    return get_key('', 'title') // get_key('', 'base');
+}
 sub get_configuration {
     my $file = shift;
     
@@ -199,6 +326,33 @@ sub get_configuration {
     }
     
     return %config;
+}
+sub get_sections_in_order {
+    my @pages = @_;
+    
+    # sort into logged out and logged in, alphabetically
+    my %sections = map { $_ => 1 } @pages;
+    my @chained_sections;
+    
+    # pull out anything chained
+    foreach my $page ( @pages ) {
+        my $chain_after = get_key($page, 'chain_after');
+        
+        if ( defined $chain_after ) {
+            if ( defined $sections{$chain_after} ) {
+                delete $sections{$chain_after};
+                push @chained_sections, $chain_after;
+            }
+            
+            delete $sections{$page};
+            push @chained_sections, $page;
+        }
+    }
+    
+    return(
+         sort( by_name_and_state keys %sections ),
+         @chained_sections,
+    );
 }
 sub by_name_and_state {
     my $a_login = $config{$a}{'login'};
@@ -216,4 +370,13 @@ sub by_name_and_state {
         if defined $b_login && !defined $a_login;
     
     return $a cmp $b;
+}
+sub get_template_generator {
+    my $jigsaw = Template::Jigsaw->new();
+    
+    $jigsaw->set_repository( '_templates' );
+    $jigsaw->scan_repository();
+    $jigsaw->set_dimensions({ _ => 'type' });
+    
+    return $jigsaw;
 }
