@@ -50,10 +50,18 @@ specified in your `grabs.ini` file.
     
     # take only those screengrabs that match the argument(s);
     # arguments can be full or partial names, and support
-    # wildcards as it is really a regexp match
+    # wildcards (as it is really an unbound regexp match)
+    
+    # matches section 'compose-tweet'
+    % webkit2png-driver compose
+    
+    # matches sections 'homepage/logged-out' and 'homepage/logged-out-nojs'
+    # in the provided example twitter-sample.ini
     % webkit2png-driver homepage/logged-out
-    % webkit2png-driver nojs noflash
     % webkit2png-driver home.*out
+    
+    # matches five sections
+    % webkit2png-driver no-js
 
 ### Generate HTML indexes
 
