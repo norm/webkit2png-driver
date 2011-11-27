@@ -206,9 +206,9 @@ sub login {
     my $password       = $config{$section}{'password'};
     my $submit_button  = $config{'form#login'}{'submit'};
     my $javascript     = <<END;
-        \$("${username_field}").val("${username}");
-        \$("${password_field}").val("${password}");
-        \$("${submit_button}").trigger('click');
+        jQuery("${username_field}").val("${username}");
+        jQuery("${password_field}").val("${password}");
+        jQuery("${submit_button}").trigger('click');
 END
     
     discarded_screengrab(
@@ -221,7 +221,7 @@ END
 sub logout {
     my $logout_button = $config{'form#logout'}{'submit'};
     my $javascript    = <<END;
-        \$("${logout_button}").trigger('click');
+        jQuery("${logout_button}").trigger('click');
 END
     
     print " -- logging out\r";
@@ -327,32 +327,32 @@ sub get_args_for {
     my $javascript = get_key($section, 'js');
     my $click = get_key($section, 'click');
     if ( !defined $javascript && defined $click ) {
-        $javascript = qq(\$('${click}').trigger('click'););
+        $javascript = qq(jQuery('${click}').trigger('click'););
     }
     
     my $timeout = get_key($section, 'timeout');
     if ( defined $javascript && defined $timeout ) {
-        $javascript = "setTimeout( function() { ${javascript}; }, $timeout )"
+        $javascript = "setTimeout( function() { ${javascript}; }, $timeout );"
     }
     
     my $fill_name = get_key($section, 'fill_name');
     if ( defined $fill_name ) {
         my $name = generate_random_name();
-        $javascript .= qq(\$('${fill_name}').val("$name"););
+        $javascript .= qq(jQuery('${fill_name}').val("$name"););
     }
     my $fill_pass = get_key($section, 'fill_pass');
     if ( defined $fill_name ) {
         my $pass = generate_random_password();
-        $javascript .= qq(\$('${fill_pass}').val("$pass"););
+        $javascript .= qq(jQuery('${fill_pass}').val("$pass"););
     }
     my $fill_email = get_key($section, 'fill_email');
     if ( defined $fill_email ) {
         my $email = generate_random_email();
-        $javascript .= qq(\$('${fill_email}').val("$email"););
+        $javascript .= qq(jQuery('${fill_email}').val("$email"););
     }
     my $submit = get_key($section, 'submit');
     if ( defined $submit ) {
-        $javascript .= qq(\$('${submit}').trigger('click'););
+        $javascript .= qq(jQuery('${submit}').trigger('click'););
     }
     
     push( @args, '--js', $javascript )
