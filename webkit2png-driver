@@ -261,6 +261,9 @@ sub screengrab {
             ( ' ' x ($places*2 + 4 ) );
     
     system( 'webkit2png', @args, $url );
+    
+    logout()
+        if get_key($section, 'logout');
 }
 sub discarded_screengrab {
     my $url        = shift;
