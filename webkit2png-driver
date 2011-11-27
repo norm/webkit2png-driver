@@ -32,6 +32,8 @@ my $generator     = get_template_generator();
 my $grabs_title   = get_title();
 my @pages;
 
+$| = 1;
+
 
 
 if ( $option{'generate-indexes'} || $option{'archive'} ) {
@@ -195,6 +197,8 @@ sub login {
     my $login   = shift;
     my $section = "user#${login}";
     
+    print " -- logging in as $login\r";
+    
     my $username_field = $config{'form#login'}{'username'};
     my $username       = $config{$section}{'username'};
     my $password_field = $config{'form#login'}{'password'};
@@ -218,7 +222,9 @@ sub logout {
     my $javascript    = <<END;
         \$("${logout_button}").trigger('click');
 END
-
+    
+    print " -- logging out\r";
+    
     discarded_screengrab(
         get_full_url_for('form#logout'),
         $javascript,
@@ -228,7 +234,13 @@ END
 }
 sub screengrab {
     my $section = shift;
+    my $count   = shift;
+    my $total   = shift;
     
+    my $url = get_full_url_for( $section );
+    return unless $url;
+    
+    my @args  = get_args_for( $section );
     my $login = get_key($section, 'login') // '';
     if ( $login ne $current_login ) {
         if ( !$login ) {
@@ -239,8 +251,13 @@ sub screengrab {
         }
     }
     
-    my $url  = get_full_url_for( $section );
-    my @args = get_args_for( $section );
+    state $places = length( sprintf "%s", $total );
+    printf
+        "[%0${places}d/%0${places}d] %-40s\n%s",
+            $count, 
+            $total,
+            $section,
+            ( ' ' x ($places*2 + 4 ) );
     
     system( 'webkit2png', @args, $url );
 }
@@ -250,6 +267,7 @@ sub discarded_screengrab {
     
     system(
         'webkit2png',
+        '-q',
         '--js',
         $javascript,
         '--dir',
