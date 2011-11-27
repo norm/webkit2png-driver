@@ -6,6 +6,7 @@ use File::Copy;
 use File::Path;
 use Getopt::Long;
 use IO::All         -utf8;
+use Pod::Usage;
 use Template::Jigsaw;
 
 my %base_config = (
@@ -21,10 +22,13 @@ my %base_config = (
 my %option;
 GetOptions(
         \%option,
+        'help|h',
         'archive|a=s',
         'generate-indexes|i',
         'config|c=s',
     );
+
+pod2usage() if $option{'help'};
 
 my $conf_file     = $option{'config'} // 'grabs.ini';
 my %config        = get_configuration( $conf_file );
@@ -456,3 +460,34 @@ sub generate_random_string {
     
     return $string;
 }
+
+__END__
+
+=head1 NAME
+
+B<webkit2png-driver> - automating screengrabs
+
+=head1 SYNOPSIS
+
+B<webkit2png-driver> [-c config] [ [<section>|<regexp>] ... ]
+
+B<webkit2png-driver> [-c config] -i
+
+B<webkit2png-driver> [-c config] -a <archive-name>
+
+=head1 MORE INFORMATION
+
+Original documentation can be found in the F<README.markdown> file
+provided in the git repo
+L<https://github.com/norm/webkit2png-driver/blob/master/README.markdown>.
+
+=head1 AUTHOR
+
+Mark Norman Francis, L<norm@cackhanded.net>.
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2011 Mark Norman Francis.
+
+This library is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
