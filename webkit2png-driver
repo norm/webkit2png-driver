@@ -335,6 +335,26 @@ sub get_args_for {
         $javascript = "setTimeout( function() { ${javascript}; }, $timeout )"
     }
     
+    my $fill_name = get_key($section, 'fill_name');
+    if ( defined $fill_name ) {
+        my $name = generate_random_name();
+        $javascript .= qq(\$('${fill_name}').val("$name"););
+    }
+    my $fill_pass = get_key($section, 'fill_pass');
+    if ( defined $fill_name ) {
+        my $pass = generate_random_password();
+        $javascript .= qq(\$('${fill_pass}').val("$pass"););
+    }
+    my $fill_email = get_key($section, 'fill_email');
+    if ( defined $fill_email ) {
+        my $email = generate_random_email();
+        $javascript .= qq(\$('${fill_email}').val("$email"););
+    }
+    my $submit = get_key($section, 'submit');
+    if ( defined $submit ) {
+        $javascript .= qq(\$('${submit}').trigger('click'););
+    }
+    
     push( @args, '--js', $javascript )
         if defined $javascript;
     
@@ -413,4 +433,26 @@ sub get_template_generator {
     $jigsaw->set_dimensions({ _ => 'type' });
     
     return $jigsaw;
+}
+sub generate_random_name {
+    return sprintf
+            'John %s Doe',
+                ucfirst generate_random_string();
+}
+sub generate_random_password {
+    return generate_random_string();
+}
+sub generate_random_email {
+    return generate_random_string() . '@mailinator.com';
+}
+sub generate_random_string {
+    my $string = '';
+    state $first_letter = ord 'a';
+    
+    foreach my $i ( 1 .. 12 ) {
+        my $letter = int rand 26;
+        $string .= chr( $letter + $first_letter );
+    }
+    
+    return $string;
 }
