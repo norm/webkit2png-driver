@@ -325,6 +325,11 @@ sub get_args_for {
         if get_key($section, 'noimages');
     
     my $javascript = get_key($section, 'js');
+    my $click = get_key($section, 'click');
+    if ( !defined $javascript && defined $click ) {
+        $javascript = qq(\$('${click}').trigger('click'););
+    }
+    
     my $timeout = get_key($section, 'timeout');
     if ( defined $javascript && defined $timeout ) {
         $javascript = "setTimeout( function() { ${javascript}; }, $timeout )"
