@@ -14,6 +14,7 @@ my %base_config = (
         make_fullsize   => 1,
         make_thumb      => 1,
         clipwidth       => 250,
+        clipheight      => 300,
         width           => 1024,
     );
 
@@ -293,14 +294,16 @@ sub get_args_for {
     my $section = shift;
     my @args;
     
-    my $width     = get_key($section, 'width');
-    my $clipwidth = get_key($section, 'clipwidth');
-    my $scale     = sprintf "%0.5f", $clipwidth / $width;
+    my $width      = get_key($section, 'width');
+    my $clipwidth  = get_key($section, 'clipwidth');
+    my $clipheight = get_key($section, 'clipheight');
+    my $scale      = sprintf "%0.5f", $clipwidth / $width;
     mkpath $section;
     
     push @args,
         '--width',      $width,
         '--clipwidth',  $clipwidth,
+        '--clipheight', $clipheight,
         '--scale',      $scale,
         '--dir',        $section,
         '--filename',   'latest',
