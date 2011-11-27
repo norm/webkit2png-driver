@@ -209,11 +209,13 @@ sub login {
     my $password_field = $config{'form#login'}{'password'};
     my $password       = $config{$section}{'password'};
     my $submit_button  = $config{'form#login'}{'submit'};
-    my $javascript     = <<END;
-        jQuery("${username_field}").val("${username}");
-        jQuery("${password_field}").val("${password}");
-        jQuery("${submit_button}").trigger('click');
-END
+    my $checkbox_field = $config{'form#login'}{'checkbox'};
+    
+    my $javascript = qq(jQuery("${username_field}").val("${username}");)
+                   . qq(jQuery("${password_field}").val("${password}"););
+    $javascript   .= qq(jQuery("${checkbox_field}").trigger('click');)
+        if defined $checkbox_field;
+    $javascript   .= qq(jQuery("${submit_button}").trigger('click'););
     
     discarded_screengrab(
         get_full_url_for('form#login'),

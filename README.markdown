@@ -172,6 +172,8 @@ Create a section called `form#login`, and provide the following options:
   with the user ID/username/email
 * **password**: jQuery selector specifying the input element to fill out
   with the user password
+* **checkbox**: jQuery selector specifying the input element(s) to click
+  before submitting the login form (eg. "Agree to T&Cs" or "Remember me")
 * **submit**: jQuery selector specifying the element to "click" to after
   filling out the username and password.
 
