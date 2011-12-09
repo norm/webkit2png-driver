@@ -392,9 +392,9 @@ sub get_sections_in_order {
     
     # sort into logged out and logged in, alphabetically
     my %sections = map { $_ => 1 } @pages;
-    my @chained_sections;
     
     # pull out anything chained
+    my @chained_sections;
     foreach my $page ( @pages ) {
         my $chain_after = get_key($page, 'chain_after');
         
@@ -404,14 +404,16 @@ sub get_sections_in_order {
                 push @chained_sections, $chain_after;
             }
             
-            delete $sections{$page};
-            push @chained_sections, $page;
+            if ( defined $sections{$page} ) {
+                delete $sections{$page};
+                push @chained_sections, $page;
+            }
         }
     }
     
     return(
          sort( by_name_and_state keys %sections ),
-         @chained_sections,
+         sort_chained( @chained_sections ),
     );
 }
 sub by_name_and_state {
@@ -430,6 +432,30 @@ sub by_name_and_state {
         if defined $b_login && !defined $a_login;
     
     return $a cmp $b;
+}
+sub sort_chained {
+    my @chained = @_;
+    
+    my %sections = map { $_ => 1 } @chained;
+    my $bump_score;
+    
+    $bump_score = sub {
+            my $section = shift;
+            return unless defined $section;
+            
+            $sections{$section}++;
+            &$bump_score( $config{$section}{'chain_after'} );
+        };
+    
+    foreach my $section ( @chained ) {
+        &$bump_score( $config{$section}{'chain_after'} );
+    }
+    
+    my $by_score = sub {
+            return $sections{$b} <=> $sections{$a};
+        };
+    
+    return sort $by_score keys %sections;
 }
 sub get_template_generator {
     my $jigsaw = Template::Jigsaw->new();
